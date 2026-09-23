@@ -29,11 +29,13 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+(error) => {
+  if (error.code !== "ERR_CANCELED") {
     console.error("API Error:", error);
-
-    return Promise.reject(error);
   }
+
+  return Promise.reject(error);
+}
 );
 
 export default api;

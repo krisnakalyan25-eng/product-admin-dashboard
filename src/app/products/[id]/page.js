@@ -46,22 +46,47 @@ export default function ProductDetailsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4 text-red-600">{error}</p>
+//   if (error) {
+//     return (
+//       <main className="flex min-h-screen items-center justify-center">
+//         <div className="text-center">
+//           <p className="mb-4 text-red-600">{error}</p>
 
-          <button
-            onClick={() => router.back()}
-            className="rounded-lg bg-black px-4 py-2 text-white"
-          >
-            Go Back
-          </button>
-        </div>
-      </main>
-    );
-  }
+//           <button
+//             onClick={() => router.back()}
+//             className="rounded-lg bg-black px-4 py-2 text-white"
+//           >
+//             Go Back
+//           </button>
+//         </div>
+//       </main>
+//     );
+//   }
+
+            
+            if (error) {
+            return (
+                <main className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+                <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-sm">
+                    <h1 className="text-2xl font-bold text-gray-900">
+                    Product Not Found
+                    </h1>
+
+                    <p className="mt-2 text-gray-600">
+                    We couldn't find a product with this ID.
+                    </p>
+
+                    <button
+                    onClick={() => router.push("/products")}
+                    className="mt-6 rounded-lg bg-black px-4 py-2 text-white"
+                    >
+                    Back to Products
+                    </button>
+                </div>
+                </main>
+            );
+            }
+
 
  return (
   <main className="min-h-screen bg-gray-100 p-6">

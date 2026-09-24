@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ProductTable({ products, onDelete }) {
   return (
     <>
@@ -28,9 +30,12 @@ export default function ProductTable({ products, onDelete }) {
                     className="h-12 w-12 rounded object-cover"
                   />
 
-                  <span className="font-medium">
+                  <Link
+                    href={`/products/${product.id}`}
+                    className="font-medium hover:underline"
+                    >
                     {product.title}
-                  </span>
+                    </Link>
                 </div>
               </td>
 
@@ -63,12 +68,20 @@ export default function ProductTable({ products, onDelete }) {
         </tbody>
       </table>
     </div>
+{/* mobile cards */}
      <div className="space-y-4 md:hidden">
         {products.map((product) => (
           <div
             key={product.id}
             className="rounded-xl border bg-white p-4 shadow-sm"
           >
+
+            <Link
+            href={`/products/${product.id}`}
+            className="font-medium hover:underline"
+            >
+            {product.title}
+            </Link>
             <div className="flex gap-4">
               <img
                 src={product.thumbnail}

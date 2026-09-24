@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "../../../utils/auth";
 import { addProduct } from "../../../services/productService";
+import { saveAddedProduct } from "../../../utils/productStorage";
 
 export default function AddProductPage() {
   const router = useRouter();
@@ -58,10 +59,11 @@ export default function AddProductPage() {
       };
 
       const createdProduct = await addProduct(productData);
-
+        saveAddedProduct(createdProduct);
             console.log("Created product:", createdProduct);
 
             router.push("/products");
+           
     } catch (error) {
       console.error(error);
       setError("Failed to add product.");

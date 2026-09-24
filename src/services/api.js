@@ -20,9 +20,16 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
+ (error) => {
+  if (
+    error.code !== "ERR_CANCELED" &&
+    error.response?.status !== 404
+  ) {
+    console.error("API Error:", error);
   }
+
+  return Promise.reject(error);
+}
 );
 
 api.interceptors.response.use(
@@ -30,7 +37,10 @@ api.interceptors.response.use(
     return response;
   },
 (error) => {
-  if (error.code !== "ERR_CANCELED") {
+  if (
+    error.code !== "ERR_CANCELED" &&
+    error.response?.status !== 404
+  ) {
     console.error("API Error:", error);
   }
 

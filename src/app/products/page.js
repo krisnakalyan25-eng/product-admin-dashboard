@@ -1,6 +1,4 @@
 
-
-
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
@@ -12,9 +10,13 @@ import {
   searchProducts,
   getCategories,
   getProductsByCategory,
-  deleteProduct
+  deleteProduct,
 } from "../../services/productService";
 import ProductTable from "../../components/ProductTable";
+import {
+  getProductMutations,
+  saveDeletedProduct,
+} from "../../utils/productStorage";
 
 function ProductsContent() {
   const router = useRouter();
@@ -51,10 +53,9 @@ function ProductsContent() {
       ? pageParam
       : 1;
 
-  const limit =
-    [10, 20, 50].includes(limitParam)
-      ? limitParam
-      : 20;
+  const limit = [10, 20, 50].includes(limitParam)
+    ? limitParam
+    : 20;
 
   const sortBy = validSortFields.includes(sortByParam)
     ? sortByParam
@@ -63,6 +64,15 @@ function ProductsContent() {
   const order = validSortOrders.includes(orderParam)
     ? orderParam
     : "";
+
+  // -----------------------------
+  // Pagination
+  // -----------------------------
+
+  // IMPORTANT:
+  // This must be outside loadProducts()
+  // because it is also used in the JSX.
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   // -----------------------------
   // Search state
@@ -85,8 +95,8 @@ function ProductsContent() {
   ) => {
     const params = new URLSearchParams();
 
-    params.set("page", newPage);
-    params.set("limit", newLimit);
+    params.set("page", String(newPage));
+    params.set("limit", String(newLimit));
 
     const trimmedSearch = newSearch.trim();
 
@@ -222,15 +232,69 @@ function ProductsContent() {
           });
         }
 
-        setProducts(data.products);
-        setTotal(data.total);
+        // -----------------------------
+        // Apply local mutations
+        // -----------------------------
 
-        const totalPages = Math.ceil(data.total / limit);
+        const mutations = getProductMutations();
 
-        // Correct an invalid page
-        if (page > totalPages && totalPages > 0) {
+        const deletedIds = new Set(
+          (mutations.deleted || []).map((id) => Number(id))
+        );
+
+        const updatedMap = mutations.updated || {};
+
+        const updatedProducts = (data.products || [])
+          .map((product) => {
+            const updatedProduct =
+              updatedMap[String(product.id)];
+
+            return updatedProduct
+              ? {
+                  ...product,
+                  ...updatedProduct,
+                }
+              : product;
+          })
+          .filter(
+            (product) =>
+              !deletedIds.has(Number(product.id))
+          );
+
+        const addedProducts = (
+          mutations.added || []
+        ).filter(
+          (product) =>
+            !deletedIds.has(Number(product.id))
+        );
+
+        const finalProducts = [
+          ...addedProducts,
+          ...updatedProducts,
+        ];
+
+        setProducts(finalProducts);
+
+        const finalTotal =
+          Number(data.total || 0) +
+          addedProducts.length;
+
+        setTotal(finalTotal);
+
+        // -----------------------------
+        // Correct invalid page
+        // -----------------------------
+
+        const calculatedTotalPages = Math.ceil(
+          finalTotal / limit
+        );
+
+        if (
+          calculatedTotalPages > 0 &&
+          page > calculatedTotalPages
+        ) {
           updateUrl(
-            totalPages,
+            calculatedTotalPages,
             limit,
             searchParam,
             categoryParam,
@@ -239,10 +303,11 @@ function ProductsContent() {
           );
         }
       } catch (error) {
-        // Ignore intentionally cancelled requests
+        // Ignore cancelled requests
         if (
           error.name === "CanceledError" ||
-          error.code === "ERR_CANCELED"
+          error.code === "ERR_CANCELED" ||
+          error.name === "AbortError"
         ) {
           return;
         }
@@ -262,15 +327,15 @@ function ProductsContent() {
       controller.abort();
     };
   }, [
-  router,
-  page,
-  limit,
-  searchParam,
-  categoryParam,
-  sortBy,
-  order,
-  retryCount,
-]);
+    router,
+    page,
+    limit,
+    searchParam,
+    categoryParam,
+    sortBy,
+    order,
+    retryCount,
+  ]);
 
   // -----------------------------
   // Logout
@@ -279,6 +344,62 @@ function ProductsContent() {
   const handleLogout = () => {
     logoutUser();
     router.replace("/login");
+  };
+
+  // -----------------------------
+  // Delete product
+  // -----------------------------
+
+  const handleDelete = async () => {
+    if (!productToDelete || isDeleting) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+
+      const productId = productToDelete.id;
+
+      const isLocalProduct =
+        String(productId).startsWith("local-");
+
+      if (isLocalProduct) {
+        const mutations = getProductMutations();
+
+        const updatedMutations = {
+          ...mutations,
+          added: (mutations.added || []).filter(
+            (product) => product.id !== productId
+          ),
+        };
+
+        localStorage.setItem(
+          "productMutations",
+          JSON.stringify(updatedMutations)
+        );
+      } else {
+        await deleteProduct(productId);
+
+        saveDeletedProduct(productId);
+      }
+
+      setProducts((currentProducts) =>
+        currentProducts.filter(
+          (product) => product.id !== productId
+        )
+      );
+
+      setTotal((currentTotal) =>
+        Math.max(currentTotal - 1, 0)
+      );
+
+      setProductToDelete(null);
+    } catch (error) {
+      console.error(error);
+      setError("Failed to delete product.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // -----------------------------
@@ -294,53 +415,24 @@ function ProductsContent() {
       </main>
     );
   }
-// delete button
 
-  const handleDelete = async () => {
-  if (!productToDelete || isDeleting) {
-    return;
-  }
-
-  try {
-    setIsDeleting(true);
-
-    await deleteProduct(productToDelete.id);
-
-    setProducts((currentProducts) =>
-      currentProducts.filter(
-        (product) => product.id !== productToDelete.id
-      )
-    );
-
-    setTotal((currentTotal) => Math.max(currentTotal - 1, 0));
-
-    setProductToDelete(null);
-  } catch (error) {
-    console.error(error);
-    setError("Failed to delete product.");
-  } finally {
-    setIsDeleting(false);
-  }
-};
   // -----------------------------
   // UI
   // -----------------------------
 
   return (
     <main className="min-h-screen bg-gray-100">
- 
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          
           <h1 className="text-xl font-bold">
             Product Admin Dashboard
           </h1>
 
-          {/* Right-side buttons */}
           <div className="flex items-center gap-3">
-
             <button
-              onClick={() => router.push("/products/new")}
+              onClick={() =>
+                router.push("/products/new")
+              }
               className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
             >
               + Add Product
@@ -352,13 +444,9 @@ function ProductsContent() {
             >
               Logout
             </button>
-
           </div>
-
         </div>
       </header>
-
-
 
       <section className="mx-auto max-w-7xl p-6">
         <h2 className="mb-6 text-2xl font-bold">
@@ -367,7 +455,6 @@ function ProductsContent() {
 
         {/* Filters */}
         <div className="mb-6 flex flex-col gap-3 md:flex-row">
-
           {/* Search */}
           <input
             type="text"
@@ -383,7 +470,8 @@ function ProductsContent() {
           <select
             value={categoryParam}
             onChange={(event) => {
-              const newCategory = event.target.value;
+              const newCategory =
+                event.target.value;
 
               updateUrl(
                 1,
@@ -420,7 +508,6 @@ function ProductsContent() {
             onChange={(event) => {
               const value = event.target.value;
 
-              // Clear sorting
               if (!value) {
                 updateUrl(
                   1,
@@ -434,8 +521,10 @@ function ProductsContent() {
                 return;
               }
 
-              const [newSortBy, newOrder] =
-                value.split("-");
+              const [
+                newSortBy,
+                newOrder,
+              ] = value.split("-");
 
               updateUrl(
                 1,
@@ -448,9 +537,7 @@ function ProductsContent() {
             }}
             className="rounded-lg border bg-white px-4 py-2 outline-none focus:ring-2"
           >
-            <option value="">
-              Sort By
-            </option>
+            <option value="">Sort By</option>
 
             <option value="price-asc">
               Price: Low to High
@@ -490,12 +577,20 @@ function ProductsContent() {
         {/* Error */}
         {!isLoading && error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-            <p className="text-red-600">{error}</p>
+            <p className="text-red-600">
+              {error}
+            </p>
 
-           <button
-         onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
-                      Retry
-                    </button>
+            <button
+              onClick={() =>
+                setRetryCount(
+                  (count) => count + 1
+                )
+              }
+              className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -514,13 +609,12 @@ function ProductsContent() {
         {!isLoading &&
           !error &&
           products.length > 0 && (
-        <ProductTable
-            products={products}
-            onDelete={(product) => {
-              setProductToDelete(product);
-            }}
-          />
-        
+            <ProductTable
+              products={products}
+              onDelete={(product) => {
+                setProductToDelete(product);
+              }}
+            />
           )}
 
         {/* Pagination */}
@@ -528,16 +622,18 @@ function ProductsContent() {
           !error &&
           products.length > 0 && (
             <div className="mt-6 flex flex-col gap-4 rounded-lg bg-white p-4 md:flex-row md:items-center md:justify-between">
-
               <p className="text-sm text-gray-600">
                 Showing{" "}
                 {(page - 1) * limit + 1}–
-                {Math.min(page * limit, total)}{" "}
+                {Math.min(
+                  page * limit,
+                  total
+                )}{" "}
                 of {total}
               </p>
 
-              <div className="flex items-center gap-2">
-
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Page size */}
                 <label
                   htmlFor="pageSize"
                   className="text-sm text-gray-600"
@@ -551,7 +647,9 @@ function ProductsContent() {
                   onChange={(event) => {
                     updateUrl(
                       1,
-                      Number(event.target.value),
+                      Number(
+                        event.target.value
+                      ),
                       searchParam,
                       categoryParam,
                       sortBy,
@@ -560,11 +658,18 @@ function ProductsContent() {
                   }}
                   className="rounded-lg border px-3 py-2 text-sm"
                 >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
+                  <option value={10}>
+                    10
+                  </option>
+                  <option value={20}>
+                    20
+                  </option>
+                  <option value={50}>
+                    50
+                  </option>
                 </select>
 
+                {/* Previous */}
                 <button
                   onClick={() =>
                     updateUrl(
@@ -577,15 +682,44 @@ function ProductsContent() {
                     )
                   }
                   disabled={page === 1}
-                  className="rounded-lg border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
 
-                <span className="px-3 text-sm font-medium">
-                  Page {page}
-                </span>
+                {/* Page numbers */}
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => {
+                    const pageNumber =
+                      index + 1;
 
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() =>
+                          updateUrl(
+                            pageNumber,
+                            limit,
+                            searchParam,
+                            categoryParam,
+                            sortBy,
+                            order
+                          )
+                        }
+                        className={`rounded-lg px-3 py-2 text-sm ${
+                          pageNumber === page
+                            ? "bg-black text-white"
+                            : "border border-gray-300 hover:bg-gray-100"
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+                )}
+
+                {/* Next */}
                 <button
                   onClick={() =>
                     updateUrl(
@@ -597,52 +731,56 @@ function ProductsContent() {
                       order
                     )
                   }
-                  disabled={page * limit >= total}
-                  className="rounded-lg border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={page >= totalPages}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
-
               </div>
             </div>
           )}
       </section>
 
+      {/* Delete confirmation modal */}
       {productToDelete && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-      <h2 className="text-xl font-bold">
-        Delete Product?
-      </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold">
+              Delete Product?
+            </h2>
 
-      <p className="mt-2 text-sm text-gray-600">
-        Are you sure you want to delete{" "}
-        <span className="font-semibold">
-          {productToDelete.title}
-        </span>
-        ?
-      </p>
+            <p className="mt-2 text-sm text-gray-600">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">
+                {productToDelete.title}
+              </span>
+              ?
+            </p>
 
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={() => setProductToDelete(null)}
-          disabled={isDeleting}
-          className="rounded-lg border px-4 py-2"
-        >
-          Cancel
-        </button>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() =>
+                  setProductToDelete(null)
+                }
+                disabled={isDeleting}
+                className="rounded-lg border px-4 py-2"
+              >
+                Cancel
+              </button>
 
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="rounded-lg bg-red-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isDeleting ? "Deleting..." : "Delete"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeleting
+                  ? "Deleting..."
+                  : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -662,4 +800,3 @@ export default function ProductsPage() {
     </Suspense>
   );
 }
-

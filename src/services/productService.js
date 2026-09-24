@@ -67,3 +67,11 @@ export const getProductsByCategory = async ({
 
   return response.data;
 };
+
+export const getProductById = async (id, { signal } = {}) => {
+  const response = await api.get(`/products/${id}`, {
+    signal,
+  });
+
+  return response.data;
+};

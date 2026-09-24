@@ -12,6 +12,7 @@ import {
   searchProducts,
   getCategories,
   getProductsByCategory,
+  deleteProduct
 } from "../../services/productService";
 import ProductTable from "../../components/ProductTable";
 
@@ -25,6 +26,8 @@ function ProductsContent() {
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
+  const [productToDelete, setProductToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
   // -----------------------------
   // URL values
@@ -289,7 +292,34 @@ function ProductsContent() {
       </main>
     );
   }
+// delete button
 
+  const handleDelete = async () => {
+  if (!productToDelete || isDeleting) {
+    return;
+  }
+
+  try {
+    setIsDeleting(true);
+
+    await deleteProduct(productToDelete.id);
+
+    setProducts((currentProducts) =>
+      currentProducts.filter(
+        (product) => product.id !== productToDelete.id
+      )
+    );
+
+    setTotal((currentTotal) => Math.max(currentTotal - 1, 0));
+
+    setProductToDelete(null);
+  } catch (error) {
+    console.error(error);
+    setError("Failed to delete product.");
+  } finally {
+    setIsDeleting(false);
+  }
+};
   // -----------------------------
   // UI
   // -----------------------------
@@ -479,7 +509,13 @@ function ProductsContent() {
         {!isLoading &&
           !error &&
           products.length > 0 && (
-            <ProductTable products={products} />
+        <ProductTable
+            products={products}
+            onDelete={(product) => {
+              setProductToDelete(product);
+            }}
+          />
+        
           )}
 
         {/* Pagination */}
@@ -566,6 +602,42 @@ function ProductsContent() {
             </div>
           )}
       </section>
+
+      {productToDelete && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <h2 className="text-xl font-bold">
+        Delete Product?
+      </h2>
+
+      <p className="mt-2 text-sm text-gray-600">
+        Are you sure you want to delete{" "}
+        <span className="font-semibold">
+          {productToDelete.title}
+        </span>
+        ?
+      </p>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          onClick={() => setProductToDelete(null)}
+          disabled={isDeleting}
+          className="rounded-lg border px-4 py-2"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="rounded-lg bg-red-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isDeleting ? "Deleting..." : "Delete"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }

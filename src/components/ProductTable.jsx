@@ -1,4 +1,4 @@
-export default function ProductTable({ products }) {
+export default function ProductTable({ products, onDelete }) {
   return (
     <div className="overflow-x-auto rounded-lg border bg-white">
       <table className="min-w-full text-left text-sm">
@@ -9,6 +9,7 @@ export default function ProductTable({ products }) {
             <th className="px-4 py-3 font-semibold">Price</th>
             <th className="px-4 py-3 font-semibold">Rating</th>
             <th className="px-4 py-3 font-semibold">Stock</th>
+            <th className="px-4 py-3 font-semibold">Actions</th>
           </tr>
         </thead>
 
@@ -47,6 +48,15 @@ export default function ProductTable({ products }) {
               <td className="px-4 py-3">
                 {product.stock}
               </td>
+
+              <td className="px-4 py-3">
+                <button
+                    onClick={() => onDelete(product)}
+                    className="rounded-lg border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+                >
+                    Delete
+                </button>
+                </td>
             </tr>
           ))}
         </tbody>

@@ -3,13 +3,17 @@ import api from "./api";
 export const getProducts = async ({
   limit = 20,
   skip = 0,
+  sortBy,
+  order,
   signal,
 } = {}) => {
   const response = await api.get("/products", {
     params: {
-      limit,
-      skip,
-    },
+        limit,
+        skip,
+        sortBy,
+        order,
+      },
     signal,
   });
 
@@ -44,14 +48,18 @@ export const getProductsByCategory = async ({
   category,
   limit = 20,
   skip = 0,
+  sortBy,
+  order,
   signal,
 } = {}) => {
   const response = await api.get(
     `/products/category/${category}`,
     {
-      params: {
+     params: {
         limit,
         skip,
+        sortBy,
+        order,
       },
       signal,
     }

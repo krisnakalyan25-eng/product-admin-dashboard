@@ -66,12 +66,21 @@ export default function ProductDetailsPage() {
  return (
   <main className="min-h-screen bg-gray-100 p-6">
     <div className="mx-auto max-w-6xl">
-      <button
-        onClick={() => router.back()}
-        className="mb-6 rounded-lg border bg-white px-4 py-2 text-sm font-medium"
-      >
-        ← Back
-      </button>
+    <div className="mb-6 flex gap-3">
+            <button
+                onClick={() => router.back()}
+                className="rounded-lg border bg-white px-4 py-2 text-sm font-medium"
+            >
+                ← Back
+            </button>
+
+            <button
+                onClick={() => router.push(`/products/${params.id}/edit`)}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+            >
+                Edit Product
+            </button>
+            </div>
 
       <div className="rounded-xl bg-white p-6 shadow">
         <div className="grid gap-8 md:grid-cols-2">

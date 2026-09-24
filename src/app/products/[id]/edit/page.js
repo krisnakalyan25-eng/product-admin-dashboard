@@ -1,0 +1,257 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { isAuthenticated } from "../../../../utils/auth";
+import {
+  getProductById,
+  updateProduct,
+} from "../../../../services/productService";
+
+export default function EditProductPage() {
+  const params = useParams();
+  const router = useRouter();
+
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [stock, setStock] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.replace("/login");
+      return;
+    }
+
+    const loadProduct = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const data = await getProductById(params.id);
+
+        setTitle(data.title || "");
+        setPrice(data.price ?? "");
+        setCategory(data.category || "");
+        setStock(data.stock ?? "");
+        setDescription(data.description || "");
+      } catch (error) {
+        console.error(error);
+        setError("Product not found.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [params.id, router]);
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p>Loading product...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-red-600">{error}</p>
+
+          <button
+            onClick={() => router.back()}
+            className="rounded-lg bg-black px-4 py-2 text-white"
+          >
+            Go Back
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const handleSubmit = async (event) => {
+  event.preventDefault();
+
+  setError("");
+
+  if (!title.trim()) {
+    setError("Product title is required.");
+    return;
+  }
+
+  if (!price || Number(price) <= 0) {
+    setError("Price must be greater than 0.");
+    return;
+  }
+
+  if (!category.trim()) {
+    setError("Category is required.");
+    return;
+  }
+
+  if (stock === "" || Number(stock) < 0) {
+    setError("Stock cannot be negative.");
+    return;
+  }
+
+  if (isSaving) {
+    return;
+  }
+
+  try {
+    setIsSaving(true);
+
+    const productData = {
+      title: title.trim(),
+      price: Number(price),
+      category: category.trim(),
+      stock: Number(stock),
+      description: description.trim(),
+    };
+
+    const updatedProduct = await updateProduct(
+      params.id,
+      productData
+    );
+
+    console.log("Updated product:", updatedProduct);
+
+    router.push(`/products/${params.id}`);
+  } catch (error) {
+    console.error(error);
+    setError("Failed to update product.");
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+  return (
+    <main className="min-h-screen bg-gray-100 p-6">
+      <div className="mx-auto max-w-2xl">
+        <button
+          onClick={() => router.back()}
+          className="mb-6 rounded-lg border bg-white px-4 py-2"
+        >
+          ← Back
+        </button>
+
+        <div className="rounded-xl bg-white p-6 shadow">
+          <h1 className="mb-6 text-2xl font-bold">
+            Edit Product
+          </h1>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label
+                htmlFor="title"
+                className="mb-1 block text-sm font-medium"
+              >
+                Product Title
+              </label>
+
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="w-full rounded-lg border px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="price"
+                className="mb-1 block text-sm font-medium"
+              >
+                Price
+              </label>
+
+              <input
+                id="price"
+                type="number"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                min="0"
+                step="0.01"
+                className="w-full rounded-lg border px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="category"
+                className="mb-1 block text-sm font-medium"
+              >
+                Category
+              </label>
+
+              <input
+                id="category"
+                type="text"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className="w-full rounded-lg border px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="stock"
+                className="mb-1 block text-sm font-medium"
+              >
+                Stock
+              </label>
+
+              <input
+                id="stock"
+                type="number"
+                value={stock}
+                onChange={(event) => setStock(event.target.value)}
+                min="0"
+                className="w-full rounded-lg border px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="description"
+                className="mb-1 block text-sm font-medium"
+              >
+                Description
+              </label>
+
+              <textarea
+                id="description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={4}
+                className="w-full rounded-lg border px-3 py-2"
+              />
+            </div>
+
+            {error && (
+                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                    {error}
+                </p>
+                )}
+
+            <button
+                type="submit"
+                disabled={isSaving}
+                className="w-full rounded-lg bg-black px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                {isSaving ? "Updating..." : "Update Product"}
+                </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  );
+}

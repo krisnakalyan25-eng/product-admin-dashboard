@@ -81,3 +81,9 @@ export const addProduct = async (productData) => {
 
   return response.data;
 };
+
+export const updateProduct = async (id, productData) => {
+  const response = await api.put(`/products/${id}`, productData);
+
+  return response.data;
+};

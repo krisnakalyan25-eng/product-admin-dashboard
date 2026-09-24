@@ -27,7 +27,8 @@ function ProductsContent() {
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
   const [productToDelete, setProductToDelete] = useState(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // -----------------------------
   // URL values
@@ -261,14 +262,15 @@ function ProductsContent() {
       controller.abort();
     };
   }, [
-    router,
-    page,
-    limit,
-    searchParam,
-    categoryParam,
-    sortBy,
-    order,
-  ]);
+  router,
+  page,
+  limit,
+  searchParam,
+  categoryParam,
+  sortBy,
+  order,
+  retryCount,
+]);
 
   // -----------------------------
   // Logout
@@ -487,10 +489,13 @@ function ProductsContent() {
 
         {/* Error */}
         {!isLoading && error && (
-          <div className="rounded-lg bg-white p-8 text-center">
-            <p className="text-red-600">
-              {error}
-            </p>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+            <p className="text-red-600">{error}</p>
+
+           <button
+         onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
+                      Retry
+                    </button>
           </div>
         )}
 

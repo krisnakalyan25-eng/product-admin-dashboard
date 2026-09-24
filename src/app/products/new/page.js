@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "../../../utils/auth";
 import { addProduct } from "../../../services/productService";
@@ -17,11 +17,16 @@ export default function AddProductPage() {
 
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+useEffect(() => {
   if (!isAuthenticated()) {
     router.replace("/login");
-    return null;
+    return;
   }
+
+  setIsCheckingAuth(false);
+}, [router]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -60,7 +65,7 @@ export default function AddProductPage() {
 
       const createdProduct = await addProduct(productData);
         saveAddedProduct(createdProduct);
-            console.log("Created product:", createdProduct);
+            // console.log("Created product:", createdProduct);
 
             router.push("/products");
            
@@ -72,7 +77,16 @@ export default function AddProductPage() {
     }
   };
 
+  if (isCheckingAuth) {
+      return (
+    <main className="flex min-h-screen items-center justify-center">
+      <p>Checking authentication...</p>
+    </main>
+  );
+  }
+
   return (
+    
     <main className="min-h-screen bg-gray-100 p-6">
       <div className="mx-auto max-w-2xl">
         <button

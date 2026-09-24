@@ -33,3 +33,29 @@ export const searchProducts = async ({
 
   return response.data;
 };
+
+export const getCategories = async () => {
+  const response = await api.get("/products/categories");
+
+  return response.data;
+};
+
+export const getProductsByCategory = async ({
+  category,
+  limit = 20,
+  skip = 0,
+  signal,
+} = {}) => {
+  const response = await api.get(
+    `/products/category/${category}`,
+    {
+      params: {
+        limit,
+        skip,
+      },
+      signal,
+    }
+  );
+
+  return response.data;
+};

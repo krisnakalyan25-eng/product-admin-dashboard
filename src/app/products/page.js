@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAuthenticated } from "../../utils/auth";
 import { logoutUser } from "../../services/authService";
-import { getProducts,searchProducts } from "../../services/productService";
+import { getProducts,searchProducts,getCategories,getProductsByCategory } from "../../services/productService";
 import ProductTable from "../../components/ProductTable";
 
 function ProductsContent()  {
@@ -15,6 +15,7 @@ const searchParams = useSearchParams();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
+  const [categories, setCategories] = useState([]);
   const [searchInput, setSearchInput] = useState(
   searchParams.get("search") || ""
 );
@@ -30,6 +31,20 @@ useEffect(() => {
   };
 }, [searchInput]);
 
+
+useEffect(() => {
+  const loadCategories = async () => {
+    try {
+      const data = await getCategories();
+
+      setCategories(data);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
+
+  loadCategories();
+}, []);
 // useEffect(() => {
 //   if (debouncedSearch === searchParam) {
 //     return;
@@ -43,6 +58,7 @@ useEffect(() => {
 const pageParam = Number(searchParams.get("page"));
 const limitParam = Number(searchParams.get("limit"));
 const searchParam = searchParams.get("search") || "";
+const categoryParam = searchParams.get("category") || "";
 
     const page =
       Number.isInteger(pageParam) && pageParam > 0
@@ -56,19 +72,27 @@ const searchParam = searchParams.get("search") || "";
       // useEffect(() => {
       //   setSearchInput(searchParam);
       // }, [searchParam]);
-  const updateUrl = (newPage, newLimit, newSearch = searchParam) => {
-    const params = new URLSearchParams();
+ const updateUrl = (
+  newPage,
+  newLimit,
+  newSearch = searchParam,
+  newCategory = categoryParam
+) => {
+  const params = new URLSearchParams();
 
-    params.set("page", newPage);
-    params.set("limit", newLimit);
+  params.set("page", newPage);
+  params.set("limit", newLimit);
 
-    if (newSearch) {
-      params.set("search", newSearch);
-    }
+  if (newSearch) {
+    params.set("search", newSearch);
+  }
 
-    router.push(`/products?${params.toString()}`);
-  };
+  if (newCategory) {
+    params.set("category", newCategory);
+  }
 
+  router.push(`/products?${params.toString()}`);
+};
 // useEffect(() => {
 //   if (debouncedSearch) {
 //     updateUrl(1, limit);
@@ -80,7 +104,7 @@ useEffect(() => {
     return;
   }
 
-  updateUrl(1, limit, debouncedSearch);
+  updateUrl(1, limit, debouncedSearch, categoryParam);
 }, [debouncedSearch]);
   useEffect(() => {
       const controller = new AbortController();
@@ -106,18 +130,29 @@ useEffect(() => {
           //   limit,
           //   skip,
           // });
-              const data = searchParam
-                  ? await searchProducts({
-                      query: searchParam,
-                      limit,
-                      skip,
-                      signal: controller.signal,
-                    })
-                  : await getProducts({
-                      limit,
-                      skip,
-                      signal: controller.signal,
-                    });
+           let data;
+
+          if (categoryParam) {
+            data = await getProductsByCategory({
+              category: categoryParam,
+              limit,
+              skip,
+              signal: controller.signal,
+            });
+          } else if (searchParam) {
+            data = await searchProducts({
+              query: searchParam,
+              limit,
+              skip,
+              signal: controller.signal,
+            });
+          } else {
+            data = await getProducts({
+              limit,
+              skip,
+              signal: controller.signal,
+            });
+          }
         setProducts(data.products);
         setTotal(data.total);
        
@@ -148,7 +183,7 @@ useEffect(() => {
     return () => {
   controller.abort();
 };
-  }, [router,page,limit,searchParam]);
+  }, [router,page,limit,searchParam,categoryParam]);
 
   const handleLogout = () => {
     logoutUser();
@@ -184,15 +219,34 @@ useEffect(() => {
         <h2 className="mb-6 text-2xl font-bold">
           Products
         </h2>
-        <div className="mb-6">
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search products..."
-            className="w-full rounded-lg border bg-white px-4 py-2 outline-none focus:ring-2 md:max-w-md"
-          />
-        </div>
+        <div className="mb-6 flex flex-col gap-3 md:flex-row">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search products..."
+                className="w-full rounded-lg border bg-white px-4 py-2 outline-none focus:ring-2 md:max-w-md"
+              />
+
+              <select
+                value={categoryParam}
+                onChange={(event) => {
+                  const newCategory = event.target.value;
+
+                  updateUrl(1, limit, searchParam, newCategory);
+                }}
+                className="rounded-lg border bg-white px-4 py-2 outline-none focus:ring-2"
+              >
+                <option value="">All Categories</option>
+
+                {categories.map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+        
         {isLoading && (
           <div className="rounded-lg bg-white p-8 text-center">
             <p className="text-gray-500">

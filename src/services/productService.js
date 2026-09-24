@@ -75,3 +75,9 @@ export const getProductById = async (id, { signal } = {}) => {
 
   return response.data;
 };
+
+export const addProduct = async (productData) => {
+  const response = await api.post("/products/add", productData);
+
+  return response.data;
+};

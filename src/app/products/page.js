@@ -296,20 +296,37 @@ function ProductsContent() {
 
   return (
     <main className="min-h-screen bg-gray-100">
+ 
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          
           <h1 className="text-xl font-bold">
             Product Admin Dashboard
           </h1>
 
-          <button
-            onClick={handleLogout}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
-          >
-            Logout
-          </button>
+          {/* Right-side buttons */}
+          <div className="flex items-center gap-3">
+
+            <button
+              onClick={() => router.push("/products/new")}
+              className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+            >
+              + Add Product
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="rounded-lg border px-4 py-2 text-sm font-medium"
+            >
+              Logout
+            </button>
+
+          </div>
+
         </div>
       </header>
+
+
 
       <section className="mx-auto max-w-7xl p-6">
         <h2 className="mb-6 text-2xl font-bold">

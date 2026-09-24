@@ -18,7 +18,7 @@ export default function AddProductPage() {
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
+const [rating, setRating] = useState("");
 useEffect(() => {
   if (!isAuthenticated()) {
     router.replace("/login");
@@ -52,6 +52,11 @@ useEffect(() => {
         setError("Stock cannot be negative.");
         return;
         }
+
+          if (rating === "" || Number(rating) < 0 || Number(rating) > 5) {
+            setError("Rating must be between 0 and 5.");
+            return;
+            }
     try {
       setIsSaving(true);
 
@@ -60,8 +65,9 @@ useEffect(() => {
         price: Number(price),
         category: category.trim(),
         stock: Number(stock),
+        rating: Number(rating),
         description: description.trim(),
-      };
+        };
 
       const createdProduct = await addProduct(productData);
         saveAddedProduct(createdProduct);
@@ -177,6 +183,28 @@ useEffect(() => {
               />
             </div>
 
+
+           {/* Rating */}
+                <div>
+                <label
+                    htmlFor="rating"
+                    className="mb-1 block text-sm font-medium"
+                >
+                    Rating
+                </label>
+
+                <input
+                    id="rating"
+                    type="number"
+                    value={rating}
+                    onChange={(event) => setRating(event.target.value)}
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    placeholder="0 - 5"
+                    className="w-full rounded-lg border px-3 py-2"
+                />
+                </div>
             <div>
               <label
                 htmlFor="description"

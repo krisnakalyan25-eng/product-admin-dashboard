@@ -27,7 +27,7 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
+  const [rating, setRating] = useState("");
   // --------------------------------
   // Load product
   // --------------------------------
@@ -66,6 +66,7 @@ export default function EditProductPage() {
         setPrice(data.price ?? "");
         setCategory(data.category || "");
         setStock(data.stock ?? "");
+        setRating(data.rating ?? "");
         setDescription(data.description || "");
       } catch (error) {
         console.error(error);
@@ -107,6 +108,15 @@ export default function EditProductPage() {
       return;
     }
 
+    if (
+        rating === "" ||
+        Number(rating) < 0 ||
+        Number(rating) > 5
+        ) {
+        setError("Rating must be between 0 and 5.");
+        return;
+        }
+
     if (isSaving) {
       return;
     }
@@ -119,8 +129,9 @@ export default function EditProductPage() {
         price: Number(price),
         category: category.trim(),
         stock: Number(stock),
+        rating: Number(rating),
         description: description.trim(),
-      };
+        };
 
       const isLocalProduct =
         String(params.id).startsWith("local-");
@@ -130,15 +141,15 @@ export default function EditProductPage() {
       // --------------------------------
 
       if (isLocalProduct) {
-        const localProduct = {
-          id: params.id,
-          title: productData.title,
-          price: productData.price,
-          category: productData.category,
-          stock: productData.stock,
-          description: productData.description,
-        };
-
+       const localProduct = {
+            id: params.id,
+            title: productData.title,
+            price: productData.price,
+            category: productData.category,
+            stock: productData.stock,
+            rating: productData.rating,
+            description: productData.description,
+            };
         saveUpdatedProduct(localProduct);
 
         // Return to products list
@@ -309,6 +320,28 @@ export default function EditProductPage() {
                 className="w-full rounded-lg border px-3 py-2"
               />
             </div>
+
+            {/* Rating */}
+                <div>
+                <label
+                    htmlFor="rating"
+                    className="mb-1 block text-sm font-medium"
+                >
+                    Rating
+                </label>
+
+                <input
+                    id="rating"
+                    type="number"
+                    value={rating}
+                    onChange={(event) => setRating(event.target.value)}
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    placeholder="0 - 5"
+                    className="w-full rounded-lg border px-3 py-2"
+                />
+                </div>
 
             {/* Description */}
             <div>

@@ -382,4 +382,40 @@ Completed and tested against the assignment requirements.
 
 ## License
 
-This project was created as part of a frontend development assignment.
+## Submission Notes
+
+### Key Choices
+
+- Used a shared Axios instance for all API requests.
+- Added Axios interceptors to attach the authentication token and handle API errors centrally.
+- Used URL query parameters for pagination, search, category, and sorting so the current state can be shared and refreshed.
+- Used `AbortController` with debounced search to prevent outdated search requests from replacing newer results.
+- Used localStorage to persist added, edited, and deleted products because DummyJSON does not permanently persist CRUD changes.
+- Used responsive table/card layouts so the dashboard works on both desktop and mobile screens.
+- Added loading, empty, error, retry, validation, and duplicate-submit handling for a better user experience.
+
+### Problem Faced & Fix
+
+One issue I faced was with products created through the DummyJSON API.
+
+DummyJSON accepts add, edit, and delete requests for demonstration purposes, but these changes are not permanently persisted. Because of this, an added product could disappear after refreshing the page.
+
+I solved this by storing local CRUD changes in `localStorage`. The dashboard merges these local changes with the API products, allowing added, edited, and deleted products to remain visible during subsequent visits to the application.
+
+Another issue occurred when opening a locally created product's details page. The application initially tried to request the local ID from DummyJSON, which returned a 404 error. I fixed this by detecting local product IDs and loading those products from `localStorage` instead of making an API request.
+
+### AI Assistance
+
+I used AI as a development assistant during the assignment.
+
+AI helped me with:
+- Understanding the DummyJSON API and endpoint usage.
+- Reviewing the project structure and implementation approach.
+- Debugging errors during development.
+- Reviewing edge cases such as invalid pagination values and fast search requests.
+- Understanding and implementing request cancellation with `AbortController`.
+- Reviewing responsive UI and improving code structure.
+- Testing ideas and identifying potential issues.
+
+I reviewed, tested, and integrated the suggestions into the application myself and verified the functionality locally and on the deployed application.
+
